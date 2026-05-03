@@ -1,0 +1,11 @@
+node_modules
+dist
+build-check
+.vite
+.DS_Store
+*.log
+*.timestamp-*.mjs
+.idea/
+.idea/
+.idea/
+.idea/
