@@ -1,6 +1,6 @@
 # Snake Animation
 
-A generative canvas animation: two long, color-shifting snakes that lazily trace Lissajous-style paths across the screen, leaving fading rainbow trails behind them. Every so often each one flicks a tiny red tongue.
+A generative canvas animation for screensavers in the browser: six long, color-shifting snakes that lazily trace Lissajous-style paths across the screen, leaving fading rainbow trails behind them. Every so often each one flicks a tiny red tongue.
 
 Originally a single-file `snake.html` prototype, now a React + TypeScript + Vite app. The animation logic itself is framework-agnostic — React just owns the canvas lifecycle and the requestAnimationFrame loop.
 
