@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Renderer } from "./renderer.ts";
 import { Snake, type SnakeOptions } from "./snake.ts";
 import { DEFAULT_TARGET_PARAMS } from "./target.ts";
+import { toggleFullscreen } from "./fullscreen.ts";
 
 export interface SnakeCanvasProps {
   /**
@@ -126,5 +127,34 @@ export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanv
     };
   }, [snakeConfigs]);
 
-  return <canvas ref={canvasRef} />;
+  return (
+    <>
+      <canvas ref={canvasRef} />
+      <button
+        type="button"
+        className="fullscreen-btn"
+        aria-label="Toggle fullscreen"
+        title="Toggle fullscreen"
+        onClick={() => toggleFullscreen()}
+      >
+        {/* Simple corner-arrows fullscreen glyph */}
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 9V4h5" />
+          <path d="M20 9V4h-5" />
+          <path d="M4 15v5h5" />
+          <path d="M20 15v5h-5" />
+        </svg>
+      </button>
+    </>
+  );
 }
