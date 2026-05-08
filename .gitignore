@@ -6,6 +6,7 @@ build-check
 *.log
 *.timestamp-*.mjs
 .idea/
-.idea/
-.idea/
-.idea/
+
+# Stale TS->JS output IntelliJ may regenerate; real source is vite.config.mts
+vite.config.js
+vite.config.mjs
