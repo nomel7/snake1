@@ -4,6 +4,8 @@ A generative canvas animation for screensavers in the browser: six long, color-s
 
 Originally a single-file `snake.html` prototype, now a React + TypeScript + Vite app. The animation logic itself is framework-agnostic — React just owns the canvas lifecycle and the requestAnimationFrame loop.
 
+To see it live on s3: https://snake-animation-kdone-2026.s3.us-east-1.amazonaws.com/index.html
+
 ## Quick start
 
 ```bash
