@@ -12,7 +12,7 @@ export const CONFIG = {
   /** Maximum radians the head can rotate per frame. Lower = lazier turns. */
   maxTurn: 0.055,
   /** How translucent the per-frame "fade" rectangle is (creates the trail glow). */
-  fadeAlpha: 0.25,
+  fadeAlpha: 0.5,
   /** Tongue flick period (frames). */
   tonguePeriod: 90,
   /** How many frames within a period the tongue is visible. */
