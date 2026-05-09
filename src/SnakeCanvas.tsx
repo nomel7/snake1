@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { Renderer } from "./renderer.ts";
 import { Snake, type SnakeOptions } from "./snake.ts";
 import { DEFAULT_TARGET_PARAMS } from "./target.ts";
+import { Apple, pickRandomApple } from "./apple.ts";
+import { CONFIG } from "./config.ts";
 import { toggleFullscreen } from "./fullscreen.ts";
 
 export interface SnakeCanvasProps {
@@ -24,8 +26,8 @@ const DEFAULT_SNAKES: SnakeOptions[] = [
   {
     targetParams: {
       ...DEFAULT_TARGET_PARAMS,
-      freqX: DEFAULT_TARGET_PARAMS.freqY,
-      freqY: DEFAULT_TARGET_PARAMS.freqX,
+      freqX: DEFAULT_TARGET_PARAMS.freqX,
+      freqY: DEFAULT_TARGET_PARAMS.freqY,
     },
     hueOffset: 60,
     timeOffset: 600,
@@ -104,18 +106,48 @@ export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanv
         }),
     );
     const renderer = new Renderer(ctx);
+    const apples = Array.from(
+      { length: CONFIG.appleCount },
+      () => new Apple(canvas.width, canvas.height),
+    );
+    const headRadius = CONFIG.thickness * 0.75;
+
+    // Each snake commits to one randomly-chosen apple until it eats it; then
+    // it rolls again. Stored in a parallel array indexed alongside `snakes`.
+    const targets: (Apple | undefined)[] = snakes.map(() =>
+      pickRandomApple(apples),
+    );
 
     const onResize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       for (const s of snakes) s.setSize(canvas.width, canvas.height);
+      for (const a of apples) a.setSize(canvas.width, canvas.height);
     };
     window.addEventListener("resize", onResize);
 
     let raf = 0;
     const loop = () => {
-      for (const s of snakes) s.update();
+      // Each snake steers toward its currently-assigned random apple.
+      for (let i = 0; i < snakes.length; i++) {
+        snakes[i].update(targets[i]?.pos);
+      }
+
+      // Eat detection — each snake can eat at most one apple per frame. The
+      // eaten apple respawns; the snake that ate it picks a new random target.
+      for (let i = 0; i < snakes.length; i++) {
+        const s = snakes[i];
+        for (const a of apples) {
+          if (a.isEatenBy(s.hx, s.hy, headRadius)) {
+            a.respawn();
+            targets[i] = pickRandomApple(apples);
+            break;
+          }
+        }
+      }
+
       renderer.fade(canvas.width, canvas.height);
+      for (const a of apples) renderer.drawApple(a);
       for (const s of snakes) renderer.drawSnake(s);
       raf = requestAnimationFrame(loop);
     };

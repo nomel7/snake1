@@ -56,18 +56,23 @@ export class Snake {
 
   /**
    * Advance the simulation by one frame.
+   * If `targetOverride` is supplied (e.g. an apple position), the head steers
+   * toward that point instead of its Lissajous trajectory. Otherwise it falls
+   * back to the snake's configured Lissajous target.
    * Returns the new head position for convenience.
    */
-  update(): Vec2 {
+  update(targetOverride?: Vec2): Vec2 {
     this.time++;
     this.tongueTimer++;
 
-    const target = targetPos(
-      this.time + this.timeOffset,
-      this.width,
-      this.height,
-      this.targetParams,
-    );
+    const target =
+      targetOverride ??
+      targetPos(
+        this.time + this.timeOffset,
+        this.width,
+        this.height,
+        this.targetParams,
+      );
     const dx = target.x - this.hx;
     const dy = target.y - this.hy;
     const desired = Math.atan2(dy, dx);

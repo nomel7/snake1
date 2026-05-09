@@ -17,6 +17,8 @@ export const CONFIG = {
   tonguePeriod: 90,
   /** How many frames within a period the tongue is visible. */
   tongueDuration: 18,
+  /** How many apples are on the canvas at once. */
+  appleCount: 8,
 } as const;
 
 export type Config = typeof CONFIG;

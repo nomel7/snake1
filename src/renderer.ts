@@ -1,5 +1,6 @@
 import { CONFIG } from "./config.ts";
 import type { Snake } from "./snake.ts";
+import type { Apple } from "./apple.ts";
 
 /** HSL color for a body segment at trail-fraction `t` (0 = head, 1 = tail). */
 export function bodyColor(time: number, t: number, alpha: number, hueOffset = 0): string {
@@ -29,6 +30,67 @@ export class Renderer {
   draw(snake: Snake): void {
     this.fade(snake.width, snake.height);
     this.drawSnake(snake);
+  }
+
+  /** Draw an apple — red body, brown stem, green leaf, soft glow. */
+  drawApple(apple: Apple): void {
+    const { ctx } = this;
+    const { x, y } = apple.pos;
+    const r = apple.radius;
+
+    // Soft red glow
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
+    glow.addColorStop(0, "rgba(255,80,90,0.35)");
+    glow.addColorStop(1, "rgba(255,80,90,0)");
+    ctx.beginPath();
+    ctx.arc(x, y, r * 3, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+
+    // Apple body (radial gradient for a hint of shading)
+    const body = ctx.createRadialGradient(
+      x - r * 0.35,
+      y - r * 0.35,
+      r * 0.1,
+      x,
+      y,
+      r,
+    );
+    body.addColorStop(0, "#ff7a85");
+    body.addColorStop(1, "#c8202e");
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = body;
+    ctx.fill();
+
+    // Stem
+    ctx.beginPath();
+    ctx.moveTo(x, y - r * 0.9);
+    ctx.lineTo(x + r * 0.15, y - r * 1.4);
+    ctx.strokeStyle = "#5b3a1e";
+    ctx.lineWidth = Math.max(1.5, r * 0.18);
+    ctx.lineCap = "round";
+    ctx.stroke();
+
+    // Leaf
+    ctx.beginPath();
+    ctx.ellipse(
+      x + r * 0.55,
+      y - r * 1.15,
+      r * 0.55,
+      r * 0.28,
+      -Math.PI / 4,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fillStyle = "#3fae54";
+    ctx.fill();
+
+    // Highlight on the body
+    ctx.beginPath();
+    ctx.arc(x - r * 0.4, y - r * 0.4, r * 0.18, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fill();
   }
 
   private drawBody(snake: Snake): void {
