@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Apple, nearestApple, pickRandomApple } from "../src/apple.ts";
+import { pointInRect, type Rect } from "../src/rect.ts";
 
 /** Tiny seeded RNG so spawn positions are deterministic in tests. */
 function seqRng(values: number[]): () => number {
@@ -149,6 +150,43 @@ describe("Apple", () => {
       const before = { ...a.pos };
       a.setSize(W + 100, H + 100); // strictly larger
       expect(a.pos).toEqual(before);
+    });
+  });
+
+  describe("avoidRect", () => {
+    const sb: Rect = { x: 16, y: 16, width: 200, height: 220 };
+
+    it("never spawns a fresh apple inside the avoid rect", () => {
+      for (let i = 0; i < 200; i++) {
+        const a = new Apple(W, H, 10, Math.random, {
+          avoidRect: sb,
+          avoidPadding: 16,
+        });
+        expect(pointInRect(sb, a.pos.x, a.pos.y, 16)).toBe(false);
+      }
+    });
+
+    it("never respawns inside the avoid rect over many calls", () => {
+      const a = new Apple(W, H, 10, Math.random, {
+        avoidRect: sb,
+        avoidPadding: 16,
+      });
+      for (let i = 0; i < 200; i++) {
+        a.respawn();
+        expect(pointInRect(sb, a.pos.x, a.pos.y, 16)).toBe(false);
+      }
+    });
+
+    it("setAvoidRect controls subsequent respawns", () => {
+      const a = new Apple(W, H, 10);
+      a.setAvoidRect(sb);
+      for (let i = 0; i < 50; i++) {
+        a.respawn();
+        expect(pointInRect(sb, a.pos.x, a.pos.y, a.avoidPadding)).toBe(false);
+      }
+      // Clearing it lets the apple spawn anywhere again.
+      a.setAvoidRect(undefined);
+      expect(a.avoidRect).toBeUndefined();
     });
   });
 });

@@ -1,4 +1,12 @@
 import type { Vec2 } from "./target.ts";
+import { pointInRect, type Rect } from "./rect.ts";
+
+export interface AppleOptions {
+  /** A rectangle the apple should never spawn inside (e.g. a UI panel). */
+  avoidRect?: Rect;
+  /** Padding (px) added around the avoidRect when checking overlap. */
+  avoidPadding?: number;
+}
 
 /**
  * A single apple sitting at a random spot on the canvas.
@@ -6,6 +14,8 @@ import type { Vec2 } from "./target.ts";
  */
 export class Apple {
   pos: Vec2;
+  avoidRect?: Rect;
+  avoidPadding: number;
 
   constructor(
     public width: number,
@@ -14,13 +24,24 @@ export class Apple {
     readonly radius: number = 10,
     /** RNG hook, primarily for tests. Defaults to Math.random. */
     private readonly rng: () => number = Math.random,
+    options: AppleOptions = {},
   ) {
+    this.avoidRect = options.avoidRect;
+    this.avoidPadding = options.avoidPadding ?? this.radius * 2;
     this.pos = this.randomPos();
   }
 
   /** Pick a new random position somewhere inside the canvas (with margin). */
   respawn(): void {
     this.pos = this.randomPos();
+  }
+
+  /**
+   * Update or clear the rectangle this apple should avoid spawning inside.
+   * Does NOT immediately move the apple; the next respawn will respect it.
+   */
+  setAvoidRect(rect: Rect | undefined): void {
+    this.avoidRect = rect;
   }
 
   /** Update canvas dimensions; clamps the apple back inside the new bounds. */
@@ -47,10 +68,22 @@ export class Apple {
     const margin = this.radius * 4;
     const w = Math.max(margin * 2 + 1, this.width);
     const h = Math.max(margin * 2 + 1, this.height);
-    return {
-      x: margin + this.rng() * (w - margin * 2),
-      y: margin + this.rng() * (h - margin * 2),
-    };
+    // Rejection sampling: try a few times to land outside the avoid rect.
+    // Capped so we never infinite-loop on a degenerate avoid zone.
+    for (let i = 0; i < 50; i++) {
+      const x = margin + this.rng() * (w - margin * 2);
+      const y = margin + this.rng() * (h - margin * 2);
+      if (
+        !this.avoidRect ||
+        !pointInRect(this.avoidRect, x, y, this.avoidPadding)
+      ) {
+        return { x, y };
+      }
+    }
+    // Fallback if every sample landed in the avoid rect: place at the
+    // bottom-right of the canvas, comfortably away from the typical
+    // top-left scoreboard.
+    return { x: w - margin, y: h - margin };
   }
 }
 

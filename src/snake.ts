@@ -1,6 +1,7 @@
 import { CONFIG } from "./config.ts";
 import { clampSymmetric, normalizeAngleDiff } from "./angle.ts";
 import { DEFAULT_TARGET_PARAMS, targetPos, type TargetParams, type Vec2 } from "./target.ts";
+import { rectOutwardFrom, type Rect } from "./rect.ts";
 
 export interface SnakeOptions {
   /** Length of the trailing-segment ring buffer. */
@@ -33,6 +34,8 @@ export class Snake {
   angle = 0;
   time = 0;
   tongueTimer = 0;
+  /** How many apples this snake has eaten — incremented externally on collision. */
+  score = 0;
 
   constructor(public width: number, public height: number, options: SnakeOptions = {}) {
     this.bodyLength = options.bodyLength ?? CONFIG.bodyLength;
@@ -59,9 +62,14 @@ export class Snake {
    * If `targetOverride` is supplied (e.g. an apple position), the head steers
    * toward that point instead of its Lissajous trajectory. Otherwise it falls
    * back to the snake's configured Lissajous target.
+   *
+   * If `avoidRect` is supplied, the snake gets a soft repulsion away from
+   * that rectangle whenever its head is close to or inside it — so it curves
+   * around rather than barreling through (e.g. the scoreboard panel).
+   *
    * Returns the new head position for convenience.
    */
-  update(targetOverride?: Vec2): Vec2 {
+  update(targetOverride?: Vec2, avoidRect?: Rect): Vec2 {
     this.time++;
     this.tongueTimer++;
 
@@ -73,8 +81,24 @@ export class Snake {
         this.height,
         this.targetParams,
       );
-    const dx = target.x - this.hx;
-    const dy = target.y - this.hy;
+    let dx = target.x - this.hx;
+    let dy = target.y - this.hy;
+
+    if (avoidRect) {
+      const rep = rectOutwardFrom(avoidRect, this.hx, this.hy);
+      // Repulsion ramp: full strength at/inside the rect, falling to 0 at AVOID_RANGE.
+      const AVOID_RANGE = 80;
+      const REPEL_WEIGHT = 4; // multiplier vs. the (already-normalized) target dir
+      if (rep.dist < AVOID_RANGE) {
+        const strength = 1 - rep.dist / AVOID_RANGE;
+        // Normalize the target direction so the repulsion isn't drowned out
+        // by an apple that happens to be far away.
+        const tlen = Math.hypot(dx, dy) || 1;
+        dx = dx / tlen + rep.dx * strength * REPEL_WEIGHT;
+        dy = dy / tlen + rep.dy * strength * REPEL_WEIGHT;
+      }
+    }
+
     const desired = Math.atan2(dy, dx);
 
     const diff = normalizeAngleDiff(desired - this.angle);

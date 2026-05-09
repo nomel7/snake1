@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Renderer } from "./renderer.ts";
+import { Renderer, scoreboardRect } from "./renderer.ts";
 import { Snake, type SnakeOptions } from "./snake.ts";
 import { DEFAULT_TARGET_PARAMS } from "./target.ts";
 import { Apple, pickRandomApple } from "./apple.ts";
@@ -106,9 +106,14 @@ export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanv
         }),
     );
     const renderer = new Renderer(ctx);
+    const sbRect = scoreboardRect(snakes.length);
     const apples = Array.from(
       { length: CONFIG.appleCount },
-      () => new Apple(canvas.width, canvas.height),
+      () =>
+        new Apple(canvas.width, canvas.height, 10, Math.random, {
+          avoidRect: sbRect,
+          avoidPadding: 16,
+        }),
     );
     const headRadius = CONFIG.thickness * 0.75;
 
@@ -128,18 +133,21 @@ export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanv
 
     let raf = 0;
     const loop = () => {
-      // Each snake steers toward its currently-assigned random apple.
+      // Each snake steers toward its currently-assigned random apple, while
+      // also being repelled by the scoreboard panel so it curves around.
       for (let i = 0; i < snakes.length; i++) {
-        snakes[i].update(targets[i]?.pos);
+        snakes[i].update(targets[i]?.pos, sbRect);
       }
 
       // Eat detection — each snake can eat at most one apple per frame. The
-      // eaten apple respawns; the snake that ate it picks a new random target.
+      // eaten apple respawns; the snake that ate it picks a new random target,
+      // and its score ticks up by one.
       for (let i = 0; i < snakes.length; i++) {
         const s = snakes[i];
         for (const a of apples) {
           if (a.isEatenBy(s.hx, s.hy, headRadius)) {
             a.respawn();
+            s.score += 1;
             targets[i] = pickRandomApple(apples);
             break;
           }
@@ -149,6 +157,8 @@ export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanv
       renderer.fade(canvas.width, canvas.height);
       for (const a of apples) renderer.drawApple(a);
       for (const s of snakes) renderer.drawSnake(s);
+      // Scoreboard last so it sits on top of the snake bodies.
+      renderer.drawScoreboard(snakes, sbRect);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);

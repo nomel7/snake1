@@ -1,6 +1,20 @@
 import { CONFIG } from "./config.ts";
 import type { Snake } from "./snake.ts";
 import type { Apple } from "./apple.ts";
+import type { Rect } from "./rect.ts";
+
+/** Compute the scoreboard rectangle given a snake count. */
+export function scoreboardRect(snakeCount: number): Rect {
+  const padding = 14;
+  const titleBlock = 28;
+  const rowHeight = 26;
+  return {
+    x: 16,
+    y: 16,
+    width: 200,
+    height: padding * 2 + titleBlock + snakeCount * rowHeight,
+  };
+}
 
 /** HSL color for a body segment at trail-fraction `t` (0 = head, 1 = tail). */
 export function bodyColor(time: number, t: number, alpha: number, hueOffset = 0): string {
@@ -30,6 +44,146 @@ export class Renderer {
   draw(snake: Snake): void {
     this.fade(snake.width, snake.height);
     this.drawSnake(snake);
+  }
+
+  /**
+   * Draw the score panel — translucent rounded card listing each snake's
+   * apple count, with a live-color swatch matching the snake's head hue.
+   */
+  drawScoreboard(snakes: readonly Snake[], rect: Rect): void {
+    const { ctx } = this;
+    const { x, y, width, height } = rect;
+
+    ctx.save();
+
+    // Drop a soft cool glow behind the panel.
+    ctx.shadowColor = "rgba(120,140,255,0.25)";
+    ctx.shadowBlur = 22;
+    ctx.fillStyle = "rgba(20,22,32,0.78)";
+    this.roundRectPath(x, y, width, height, 14);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Hairline border.
+    ctx.strokeStyle = "rgba(255,255,255,0.10)";
+    ctx.lineWidth = 1;
+    this.roundRectPath(x, y, width, height, 14);
+    ctx.stroke();
+
+    // Inner top highlight to give it a subtle "lit from above" feel.
+    const topHi = ctx.createLinearGradient(x, y, x, y + 22);
+    topHi.addColorStop(0, "rgba(255,255,255,0.08)");
+    topHi.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = topHi;
+    this.roundRectPath(x + 1, y + 1, width - 2, 22, 13);
+    ctx.fill();
+
+    // Title.
+    ctx.fillStyle = "rgba(245,245,255,0.92)";
+    ctx.font =
+      "600 12px ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    // Letter-spacing-ish: tracking via small caps style.
+    ctx.fillText("APPLES EATEN", x + 16, y + 26);
+
+    // Divider under title.
+    ctx.beginPath();
+    ctx.moveTo(x + 16, y + 36);
+    ctx.lineTo(x + width - 16, y + 36);
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Rows.
+    const rowH = 26;
+    const rowsTop = y + 14 + 28; // padding + titleBlock; matches scoreboardRect()
+
+    for (let i = 0; i < snakes.length; i++) {
+      const s = snakes[i];
+      const rowY = rowsTop + i * rowH;
+      const cy = rowY + rowH / 2;
+
+      const hue = (s.time * 0.04 + s.hueOffset) % 360;
+      const swatchX = x + 24;
+      const swatchR = 6.5;
+
+      // Swatch glow halo.
+      const halo = ctx.createRadialGradient(
+        swatchX,
+        cy,
+        0,
+        swatchX,
+        cy,
+        swatchR * 2.6,
+      );
+      halo.addColorStop(0, `hsla(${hue},80%,70%,0.55)`);
+      halo.addColorStop(1, `hsla(${hue},80%,70%,0)`);
+      ctx.beginPath();
+      ctx.arc(swatchX, cy, swatchR * 2.6, 0, Math.PI * 2);
+      ctx.fillStyle = halo;
+      ctx.fill();
+
+      // Swatch dot.
+      ctx.beginPath();
+      ctx.arc(swatchX, cy, swatchR, 0, Math.PI * 2);
+      ctx.fillStyle = `hsl(${hue},80%,70%)`;
+      ctx.fill();
+
+      // Label.
+      ctx.fillStyle = "rgba(225,228,240,0.85)";
+      ctx.font =
+        "500 13px ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`Snake ${i + 1}`, swatchX + swatchR + 10, cy + 0.5);
+
+      // Score, right-aligned, in a slightly heavier weight.
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.font =
+        "600 14px ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(String(s.score), x + width - 16, cy + 0.5);
+    }
+
+    ctx.restore();
+  }
+
+  private roundRectPath(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number,
+  ): void {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    // Use the native roundRect when available; otherwise fall back to arcs.
+    const rr = (
+      ctx as CanvasRenderingContext2D & {
+        roundRect?: (
+          x: number,
+          y: number,
+          w: number,
+          h: number,
+          r: number,
+        ) => void;
+      }
+    ).roundRect;
+    if (typeof rr === "function") {
+      rr.call(ctx, x, y, w, h, r);
+      return;
+    }
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
   }
 
   /** Draw an apple — red body, brown stem, green leaf, soft glow. */

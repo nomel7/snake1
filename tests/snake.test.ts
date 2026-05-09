@@ -78,4 +78,30 @@ describe("Snake", () => {
     expect(s.segX[0]).toBe(123);
     expect(s.segY[0]).toBe(456);
   });
+
+  it("score starts at 0", () => {
+    const s = new Snake(800, 600, { bodyLength: 5 });
+    expect(s.score).toBe(0);
+  });
+
+  it("eventually leaves an avoidRect when started inside it", () => {
+    const avoid = { x: 0, y: 0, width: 200, height: 200 };
+    // Start the snake inside the avoid rect with no apple target — the
+    // repulsion alone should push it out within a reasonable number of frames.
+    const s = new Snake(800, 600, {
+      bodyLength: 50,
+      startX: 100,
+      startY: 100,
+    });
+    // Aim the snake's "natural" target away from the rect by giving it an
+    // explicit target outside, so we're really testing that the steering
+    // doesn't get stuck.
+    const target = { x: 600, y: 500 };
+    let escaped = false;
+    for (let i = 0; i < 600 && !escaped; i++) {
+      s.update(target, avoid);
+      if (s.hx > avoid.width || s.hy > avoid.height) escaped = true;
+    }
+    expect(escaped).toBe(true);
+  });
 });
