@@ -19,6 +19,10 @@ export const CONFIG = {
   tongueDuration: 18,
   /** How many apples are on the canvas at once. */
   appleCount: 8,
+  /** Segments of trail visible when a snake's score is 0. */
+  trailBaseLength: 30,
+  /** Extra trail segments added per apple eaten. */
+  trailGrowthPerApple: 50,
 } as const;
 
 export type Config = typeof CONFIG;

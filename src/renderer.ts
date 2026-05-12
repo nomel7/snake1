@@ -34,6 +34,18 @@ export function normalizeHue(hue: number): number {
   return ((hue % 360) + 360) % 360;
 }
 
+/**
+ * How many trail segments to draw for a snake with the given score. Grows
+ * linearly with score (CONFIG.trailBaseLength + score * trailGrowthPerApple),
+ * capped at `maxLength` (typically the ring-buffer size) and floored at 2 so
+ * there's always at least one segment to draw.
+ */
+export function visibleTrailLength(score: number, maxLength: number): number {
+  const target =
+    CONFIG.trailBaseLength + Math.max(0, score) * CONFIG.trailGrowthPerApple;
+  return Math.min(maxLength, Math.max(2, target));
+}
+
 /** Canonical names paired with their canonical hue (in 30° increments). */
 const HUE_NAMES: ReadonlyArray<readonly [number, string]> = [
   [0, "Red"],
@@ -44,7 +56,7 @@ const HUE_NAMES: ReadonlyArray<readonly [number, string]> = [
   [150, "Mint"],
   [180, "Cyan"],
   [210, "Sky"],
-  [240, "Blue"],
+  [240, "Purple"],
   [270, "Indigo"],
   [300, "Magenta"],
   [330, "Pink"],
@@ -395,10 +407,15 @@ export class Renderer {
 
   private drawBody(snake: Snake): void {
     const { ctx } = this;
-    const { segX, segY, head, bodyLength, hueOffset } = snake;
+    const { segX, segY, head, bodyLength, hueOffset, score } = snake;
+    // How much of the ring buffer is actually rendered. Grows with the snake's
+    // score so eating apples visibly lengthens its tail.
+    const visible = visibleTrailLength(score, bodyLength);
 
-    for (let i = bodyLength - 1; i >= 1; i--) {
-      const t = i / bodyLength;
+    for (let i = visible - 1; i >= 1; i--) {
+      // `t` is now relative to the visible length, so the head→tail taper
+      // compresses into the rendered body regardless of how long it is.
+      const t = i / visible;
       const idx0 = (head + i) % bodyLength;
       const idx1 = (head + i - 1) % bodyLength;
 

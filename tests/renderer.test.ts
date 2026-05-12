@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { bodyColor, hueName, normalizeHue } from "../src/renderer.ts";
+import {
+  bodyColor,
+  hueName,
+  normalizeHue,
+  visibleTrailLength,
+} from "../src/renderer.ts";
+import { CONFIG } from "../src/config.ts";
 
 describe("normalizeHue", () => {
   it("leaves in-range hues alone", () => {
@@ -90,5 +96,44 @@ describe("bodyColor", () => {
 
   it("normalizes negative hueOffsets", () => {
     expect(bodyColor(0, 1, -60).startsWith("hsla(300,")).toBe(true);
+  });
+});
+
+describe("visibleTrailLength", () => {
+  const MAX = 1800;
+
+  it("returns the base length at score 0", () => {
+    expect(visibleTrailLength(0, MAX)).toBe(CONFIG.trailBaseLength);
+  });
+
+  it("grows linearly with score", () => {
+    expect(visibleTrailLength(1, MAX)).toBe(
+      CONFIG.trailBaseLength + CONFIG.trailGrowthPerApple,
+    );
+    expect(visibleTrailLength(5, MAX)).toBe(
+      CONFIG.trailBaseLength + 5 * CONFIG.trailGrowthPerApple,
+    );
+  });
+
+  it("caps at maxLength once the score grows past the buffer size", () => {
+    expect(visibleTrailLength(10_000, MAX)).toBe(MAX);
+    // Right at the boundary — still capped.
+    const exactScore = Math.ceil(
+      (MAX - CONFIG.trailBaseLength) / CONFIG.trailGrowthPerApple,
+    );
+    expect(visibleTrailLength(exactScore, MAX)).toBe(MAX);
+  });
+
+  it("returns at least 2 for any sane maxLength", () => {
+    // The cap and floor both apply; with a normal maxLength we never drop
+    // below 2 segments even with weird inputs.
+    expect(visibleTrailLength(-100, MAX)).toBeGreaterThanOrEqual(2);
+    expect(visibleTrailLength(0, MAX)).toBeGreaterThanOrEqual(2);
+  });
+
+  it("treats negative scores like zero (defensive)", () => {
+    expect(visibleTrailLength(-5, MAX)).toBe(
+      visibleTrailLength(0, MAX),
+    );
   });
 });
