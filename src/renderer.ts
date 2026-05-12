@@ -1,6 +1,7 @@
 import { CONFIG } from "./config.ts";
 import type { Snake } from "./snake.ts";
 import type { Apple } from "./apple.ts";
+import type { Chomp } from "./chomp.ts";
 import type { Rect } from "./rect.ts";
 
 /** Compute the scoreboard rectangle given a snake count. */
@@ -184,6 +185,106 @@ export class Renderer {
     ctx.lineTo(x, y + r);
     ctx.quadraticCurveTo(x, y, x + r, y);
     ctx.closePath();
+  }
+
+  /**
+   * Draw a chomp effect — fang ring snapping shut, apple shards flying out,
+   * shockwave, and bright center flash.
+   */
+  drawChomp(chomp: Chomp): void {
+    const { ctx } = this;
+    const { x, y, hue, shards, age, maxAge } = chomp;
+    const t = Math.min(1, age / maxAge); // 0..1
+
+    // --- Apple shards (drawn first; the fangs/flash sit on top) -----------
+    for (const sh of shards) {
+      const dist = sh.speed * age;
+      const gravity = 0.08 * age * age; // mild downward arc over time
+      const sx = x + Math.cos(sh.angle) * dist;
+      const sy = y + Math.sin(sh.angle) * dist + gravity;
+      const rot = sh.rot + sh.rotSpeed * age;
+      const alpha = Math.max(0, 1 - t);
+
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(rot);
+      // Use the apple's red palette so it reads as "fruit exploding".
+      ctx.fillStyle = `rgba(220,40,55,${alpha})`;
+      ctx.fillRect(-sh.size / 2, -sh.size / 2, sh.size, sh.size);
+      // Light edge highlight gives the shards a glossy feel.
+      ctx.fillStyle = `rgba(255,180,180,${alpha * 0.6})`;
+      ctx.fillRect(-sh.size / 2, -sh.size / 2, sh.size, sh.size * 0.3);
+      ctx.restore();
+    }
+
+    // --- Expanding shockwave ring ----------------------------------------
+    if (t < 0.85) {
+      const wT = t / 0.85;
+      const wRadius = 6 + wT * 70;
+      const wAlpha = (1 - wT) * 0.55;
+      ctx.beginPath();
+      ctx.arc(x, y, wRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = `hsla(${hue},85%,75%,${wAlpha})`;
+      ctx.lineWidth = (1 - wT) * 3 + 1;
+      ctx.stroke();
+    }
+
+    // --- Fang ring (the "scary chomp") -----------------------------------
+    // The fangs start far out and SNAP inward over the first ~45% of the
+    // animation, then linger briefly and fade.
+    const SNAP = 0.45;
+    const snapT = Math.min(1, t / SNAP); // 0..1 during the snap
+    const fadeT = Math.max(0, (t - SNAP) / (1 - SNAP)); // 0..1 after the snap
+
+    // Easing — quick start, gentle finish — so it really snaps.
+    const eased = 1 - Math.pow(1 - snapT, 3);
+    const fangOuter = 42 - eased * 26; // 42 → 16
+    const fangInner = fangOuter - 16;
+    const fangAlpha = (1 - fadeT) * (0.9 - 0.2 * snapT);
+
+    const NUM_FANGS = 10;
+    ctx.save();
+    ctx.translate(x, y);
+    for (let i = 0; i < NUM_FANGS; i++) {
+      const a = (i / NUM_FANGS) * Math.PI * 2;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      // Inward-pointing triangle: tip at fangInner, base at fangOuter ± spread.
+      const spread = 0.18;
+      const tipX = ca * fangInner;
+      const tipY = sa * fangInner;
+      const b1X = Math.cos(a - spread) * fangOuter;
+      const b1Y = Math.sin(a - spread) * fangOuter;
+      const b2X = Math.cos(a + spread) * fangOuter;
+      const b2Y = Math.sin(a + spread) * fangOuter;
+
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(b1X, b1Y);
+      ctx.lineTo(b2X, b2Y);
+      ctx.closePath();
+      // Bone-white fangs tinted by the snake's hue, with a thin colored outline.
+      ctx.fillStyle = `hsla(${hue},40%,96%,${fangAlpha})`;
+      ctx.fill();
+      ctx.strokeStyle = `hsla(${hue},70%,55%,${fangAlpha})`;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // --- Bright center flash (only during the snap) ----------------------
+    if (snapT < 1) {
+      const fAlpha = (1 - snapT) * 0.85;
+      const fR = 22 + snapT * 10;
+      const flash = ctx.createRadialGradient(x, y, 0, x, y, fR);
+      flash.addColorStop(0, `hsla(${hue},90%,92%,${fAlpha})`);
+      flash.addColorStop(0.4, `hsla(${hue},90%,75%,${fAlpha * 0.5})`);
+      flash.addColorStop(1, `hsla(${hue},90%,75%,0)`);
+      ctx.beginPath();
+      ctx.arc(x, y, fR, 0, Math.PI * 2);
+      ctx.fillStyle = flash;
+      ctx.fill();
+    }
   }
 
   /** Draw an apple — red body, brown stem, green leaf, soft glow. */

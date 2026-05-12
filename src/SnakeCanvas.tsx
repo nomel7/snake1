@@ -3,6 +3,7 @@ import { Renderer, scoreboardRect } from "./renderer.ts";
 import { Snake, type SnakeOptions } from "./snake.ts";
 import { DEFAULT_TARGET_PARAMS } from "./target.ts";
 import { Apple, pickRandomApple } from "./apple.ts";
+import { Chomp } from "./chomp.ts";
 import { CONFIG } from "./config.ts";
 import { toggleFullscreen } from "./fullscreen.ts";
 
@@ -123,6 +124,9 @@ export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanv
       pickRandomApple(apples),
     );
 
+    // Active chomp animations. Pushed on bite, filtered out on completion.
+    const chomps: Chomp[] = [];
+
     const onResize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -141,11 +145,13 @@ export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanv
 
       // Eat detection — each snake can eat at most one apple per frame. The
       // eaten apple respawns; the snake that ate it picks a new random target,
-      // and its score ticks up by one.
+      // its score ticks up by one, and a chomp animation spawns at the bite.
       for (let i = 0; i < snakes.length; i++) {
         const s = snakes[i];
         for (const a of apples) {
           if (a.isEatenBy(s.hx, s.hy, headRadius)) {
+            const hue = (s.time * 0.04 + s.hueOffset) % 360;
+            chomps.push(new Chomp(a.pos.x, a.pos.y, hue));
             a.respawn();
             s.score += 1;
             targets[i] = pickRandomApple(apples);
@@ -154,10 +160,18 @@ export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanv
         }
       }
 
+      // Advance chomps and drop the finished ones.
+      for (const c of chomps) c.update();
+      for (let i = chomps.length - 1; i >= 0; i--) {
+        if (chomps[i].done) chomps.splice(i, 1);
+      }
+
       renderer.fade(canvas.width, canvas.height);
       for (const a of apples) renderer.drawApple(a);
       for (const s of snakes) renderer.drawSnake(s);
-      // Scoreboard last so it sits on top of the snake bodies.
+      // Chomps on top of snakes so the fangs read clearly.
+      for (const c of chomps) renderer.drawChomp(c);
+      // Scoreboard last so it sits on top of everything.
       renderer.drawScoreboard(snakes, sbRect);
       raf = requestAnimationFrame(loop);
     };
