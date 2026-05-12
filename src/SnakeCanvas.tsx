@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Renderer, scoreboardRect } from "./renderer.ts";
+import { Renderer, normalizeHue, scoreboardRect } from "./renderer.ts";
 import { Snake, type SnakeOptions } from "./snake.ts";
 import { DEFAULT_TARGET_PARAMS } from "./target.ts";
 import { Apple, pickRandomApple } from "./apple.ts";
@@ -17,23 +17,13 @@ export interface SnakeCanvasProps {
 }
 
 const DEFAULT_SNAKES: SnakeOptions[] = [
-  // 1. Red / pink — original Lissajous
+  // 1. Red — original Lissajous
   {
     targetParams: DEFAULT_TARGET_PARAMS,
     hueOffset: 0,
     timeOffset: 0,
   },
-  // 2. Yellow — rotated Lissajous (X/Y swapped)
-  {
-    targetParams: {
-      ...DEFAULT_TARGET_PARAMS,
-      freqX: DEFAULT_TARGET_PARAMS.freqX,
-      freqY: DEFAULT_TARGET_PARAMS.freqY,
-    },
-    hueOffset: 60,
-    timeOffset: 600,
-  },
-  // 3. Green — wide horizontal figure-8 (2:1)
+  // 2. Green — wide horizontal figure-8 (2:1)
   {
     targetParams: {
       ...DEFAULT_TARGET_PARAMS,
@@ -45,19 +35,7 @@ const DEFAULT_SNAKES: SnakeOptions[] = [
     hueOffset: 120,
     timeOffset: 1200,
   },
-  // 4. Cyan — tall vertical figure-8 (1:2)
-  {
-    targetParams: {
-      ...DEFAULT_TARGET_PARAMS,
-      freqX: 1.0,
-      freqY: 2.0,
-      ampX: 0.4,
-      ampY: 0.5,
-    },
-    hueOffset: 180,
-    timeOffset: 1800,
-  },
-  // 5. Blue — three-lobe rosette (3:2)
+  // 3. Blue — three-lobe rosette (3:2)
   {
     targetParams: {
       ...DEFAULT_TARGET_PARAMS,
@@ -68,18 +46,6 @@ const DEFAULT_SNAKES: SnakeOptions[] = [
     },
     hueOffset: 240,
     timeOffset: 2400,
-  },
-  // 6. Magenta — different rosette (2:3)
-  {
-    targetParams: {
-      ...DEFAULT_TARGET_PARAMS,
-      freqX: 2.0,
-      freqY: 3.0,
-      ampX: 0.42,
-      ampY: 0.42,
-    },
-    hueOffset: 300,
-    timeOffset: 3000,
   },
 ];
 
@@ -150,7 +116,7 @@ export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanv
         const s = snakes[i];
         for (const a of apples) {
           if (a.isEatenBy(s.hx, s.hy, headRadius)) {
-            const hue = (s.time * 0.04 + s.hueOffset) % 360;
+            const hue = normalizeHue(s.hueOffset);
             chomps.push(new Chomp(a.pos.x, a.pos.y, hue));
             a.respawn();
             s.score += 1;

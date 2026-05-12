@@ -17,12 +17,57 @@ export function scoreboardRect(snakeCount: number): Rect {
   };
 }
 
-/** HSL color for a body segment at trail-fraction `t` (0 = head, 1 = tail). */
-export function bodyColor(time: number, t: number, alpha: number, hueOffset = 0): string {
-  const hue = (time * 0.04 + t * 120 + hueOffset) % 360;
+/**
+ * HSL color for a body segment at trail-fraction `t` (0 = head, 1 = tail).
+ * Each snake stays a single fixed hue (set by `hueOffset`); only the
+ * lightness tapers from head to tail to give the body depth.
+ */
+export function bodyColor(t: number, alpha: number, hueOffset = 0): string {
+  const hue = normalizeHue(hueOffset);
   const sat = 70;
   const lit = 55 - t * 20;
   return `hsla(${hue},${sat}%,${lit}%,${alpha})`;
+}
+
+/** Normalize any hue value into the [0, 360) range. */
+export function normalizeHue(hue: number): number {
+  return ((hue % 360) + 360) % 360;
+}
+
+/** Canonical names paired with their canonical hue (in 30° increments). */
+const HUE_NAMES: ReadonlyArray<readonly [number, string]> = [
+  [0, "Red"],
+  [30, "Orange"],
+  [60, "Yellow"],
+  [90, "Lime"],
+  [120, "Green"],
+  [150, "Mint"],
+  [180, "Cyan"],
+  [210, "Sky"],
+  [240, "Blue"],
+  [270, "Indigo"],
+  [300, "Magenta"],
+  [330, "Pink"],
+];
+
+/**
+ * Map any HSL hue to the nearest canonical color name.
+ * Distance is measured around the color wheel, so hue 350 → "Red", not "Pink"
+ * (10° away vs. 20° away).
+ */
+export function hueName(hue: number): string {
+  const h = normalizeHue(hue);
+  let best = HUE_NAMES[0][1];
+  let bestD = Infinity;
+  for (const [canonical, name] of HUE_NAMES) {
+    const raw = Math.abs(canonical - h);
+    const d = Math.min(raw, 360 - raw); // wrap-around shortest path
+    if (d < bestD) {
+      bestD = d;
+      best = name;
+    }
+  }
+  return best;
 }
 
 export class Renderer {
@@ -105,7 +150,7 @@ export class Renderer {
       const rowY = rowsTop + i * rowH;
       const cy = rowY + rowH / 2;
 
-      const hue = (s.time * 0.04 + s.hueOffset) % 360;
+      const hue = normalizeHue(s.hueOffset);
       const swatchX = x + 24;
       const swatchR = 6.5;
 
@@ -137,7 +182,7 @@ export class Renderer {
         "500 13px ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText(`Snake ${i + 1}`, swatchX + swatchR + 10, cy + 0.5);
+      ctx.fillText(hueName(hue), swatchX + swatchR + 10, cy + 0.5);
 
       // Score, right-aligned, in a slightly heavier weight.
       ctx.fillStyle = "rgba(255,255,255,0.95)";
@@ -350,7 +395,7 @@ export class Renderer {
 
   private drawBody(snake: Snake): void {
     const { ctx } = this;
-    const { segX, segY, head, bodyLength, time, hueOffset } = snake;
+    const { segX, segY, head, bodyLength, hueOffset } = snake;
 
     for (let i = bodyLength - 1; i >= 1; i--) {
       const t = i / bodyLength;
@@ -363,7 +408,7 @@ export class Renderer {
       ctx.beginPath();
       ctx.moveTo(segX[idx0], segY[idx0]);
       ctx.lineTo(segX[idx1], segY[idx1]);
-      ctx.strokeStyle = bodyColor(time, t, alpha, hueOffset);
+      ctx.strokeStyle = bodyColor(t, alpha, hueOffset);
       ctx.lineWidth = thick;
       ctx.lineCap = "round";
       ctx.stroke();
@@ -372,8 +417,8 @@ export class Renderer {
 
   private drawHead(snake: Snake): void {
     const { ctx } = this;
-    const { hx, hy, time, hueOffset } = snake;
-    const hue = (time * 0.04 + hueOffset) % 360;
+    const { hx, hy, hueOffset } = snake;
+    const hue = normalizeHue(hueOffset);
 
     // Solid head
     ctx.beginPath();
