@@ -56,7 +56,7 @@ const HUE_NAMES: ReadonlyArray<readonly [number, string]> = [
   [150, "Mint"],
   [180, "Cyan"],
   [210, "Sky"],
-  [240, "Purple"],
+  [240, "Blue"],
   [270, "Indigo"],
   [300, "Magenta"],
   [330, "Pink"],
