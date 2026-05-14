@@ -24,7 +24,7 @@ export class Apple {
     readonly radius: number = 10,
     /** RNG hook, primarily for tests. Defaults to Math.random. */
     private readonly rng: () => number = Math.random,
-    options: AppleOptions = {},
+    options: AppleOptions = {avoidRect: { x: 0, y: 0, width: 450, height: 300}},
   ) {
     this.avoidRect = options.avoidRect;
     this.avoidPadding = options.avoidPadding ?? this.radius * 2;
