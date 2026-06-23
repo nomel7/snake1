@@ -1,21 +1,7 @@
-import { CONFIG } from "./config.ts";
+import { CONFIG, type SnakeOptions } from "./config.ts";
 import { clampSymmetric, normalizeAngleDiff } from "./angle.ts";
 import { DEFAULT_TARGET_PARAMS, targetPos, type TargetParams, type Vec2 } from "./target.ts";
 import { rectOutwardFrom, type Rect } from "./rect.ts";
-
-export interface SnakeOptions {
-  /** Length of the trailing-segment ring buffer. */
-  bodyLength?: number;
-  /** Lissajous parameters for this snake's pursuit target. */
-  targetParams?: TargetParams;
-  /** Degrees of hue offset added to this snake's color cycle. */
-  hueOffset?: number;
-  /** Phase offset (in frames) added to time when computing the target. */
-  timeOffset?: number;
-  /** Initial head position. Defaults to canvas center. */
-  startX?: number;
-  startY?: number;
-}
 
 /**
  * Snake state. The body is a ring buffer of (x, y) positions, with `head`

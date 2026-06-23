@@ -14,7 +14,7 @@ describe("Apple", () => {
 
   describe("constructor + randomPos", () => {
     it("spawns at a deterministic position when given a seeded RNG", () => {
-      const a = new Apple(W, H, 10, seqRng([0.25, 0.5]));
+      const a = new Apple(W, H, 10, seqRng([0.25, 0.5]), {});
       // margin = radius * 4 = 40; pos = margin + rand * (W|H - 2*margin)
       // x = 40 + 0.25 * (800 - 80) = 40 + 180 = 220
       // y = 40 + 0.5  * (600 - 80) = 40 + 260 = 300
@@ -24,12 +24,12 @@ describe("Apple", () => {
 
     it("never spawns past the margin even at RNG extremes", () => {
       const margin = 10 * 4;
-      const tiny = new Apple(W, H, 10, seqRng([0, 0]));
+      const tiny = new Apple(W, H, 10, seqRng([0, 0]), {});
       expect(tiny.pos.x).toBeCloseTo(margin, 6);
       expect(tiny.pos.y).toBeCloseTo(margin, 6);
 
       // RNG returns 1 → upper edge of the inner box, which is W - margin.
-      const huge = new Apple(W, H, 10, seqRng([1, 1]));
+      const huge = new Apple(W, H, 10, seqRng([1, 1]), {});
       expect(huge.pos.x).toBeCloseTo(W - margin, 6);
       expect(huge.pos.y).toBeCloseTo(H - margin, 6);
     });
@@ -54,7 +54,7 @@ describe("Apple", () => {
 
   describe("respawn", () => {
     it("moves the apple to the next RNG-driven position", () => {
-      const a = new Apple(W, H, 10, seqRng([0.1, 0.2, 0.9, 0.8]));
+      const a = new Apple(W, H, 10, seqRng([0.1, 0.2, 0.9, 0.8]), {});
       const before = { ...a.pos };
       a.respawn();
       // x = 40 + 0.9 * 720 = 688; y = 40 + 0.8 * 520 = 456
@@ -78,7 +78,7 @@ describe("Apple", () => {
 
   describe("isEatenBy", () => {
     // Pin the apple at (220, 300) for predictable collision math.
-    const makeApple = () => new Apple(W, H, 10, seqRng([0.25, 0.5]));
+    const makeApple = () => new Apple(W, H, 10, seqRng([0.25, 0.5]), {});
 
     it("returns true when the head sits exactly on the apple", () => {
       const a = makeApple();

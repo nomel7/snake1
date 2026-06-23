@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Renderer, normalizeHue, scoreboardRect } from "./renderer.ts";
-import { Snake, type SnakeOptions } from "./snake.ts";
-import { DEFAULT_TARGET_PARAMS } from "./target.ts";
+import { Snake } from "./snake.ts";
 import { Apple, pickRandomApple } from "./apple.ts";
 import { Chomp } from "./chomp.ts";
-import { CONFIG } from "./config.ts";
+import { CONFIG, DEFAULT_SNAKES } from "./config.ts";
+import { type DrawableSnake } from "./DrawableSnake.ts";
 import { toggleFullscreen } from "./fullscreen.ts";
 
 export interface SnakeCanvasProps {
@@ -13,41 +13,8 @@ export interface SnakeCanvasProps {
    * around the hue wheel, each tracing a different Lissajous figure
    * with a staggered time offset so they never sync up.
    */
-  snakes?: SnakeOptions[];
+  snakes?: DrawableSnake[];
 }
-
-const DEFAULT_SNAKES: SnakeOptions[] = [
-  // 1. Red — original Lissajous
-  {
-    targetParams: DEFAULT_TARGET_PARAMS,
-    hueOffset: 0,
-    timeOffset: 0,
-  },
-  // 2. Green — wide horizontal figure-8 (2:1)
-  {
-    targetParams: {
-      ...DEFAULT_TARGET_PARAMS,
-      freqX: 2.0,
-      freqY: 1.0,
-      ampX: 0.5,
-      ampY: 0.4,
-    },
-    hueOffset: 120,
-    timeOffset: 1200,
-  },
-  // 3. Blue — three-lobe rosette (3:2)
-  {
-    targetParams: {
-      ...DEFAULT_TARGET_PARAMS,
-      freqX: 3.0,
-      freqY: 2.0,
-      ampX: 0.42,
-      ampY: 0.42,
-    },
-    hueOffset: 240,
-    timeOffset: 2400,
-  },
-];
 
 export function SnakeCanvas({ snakes: snakeConfigs = DEFAULT_SNAKES }: SnakeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
