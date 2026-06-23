@@ -69,6 +69,7 @@ export class Snake {
       );
     let dx = target.x - this.hx;
     let dy = target.y - this.hy;
+    const distToTarget = targetOverride !== undefined ? Math.hypot(dx, dy) : Infinity;
 
     if (avoidRect) {
       const rep = rectOutwardFrom(avoidRect, this.hx, this.hy);
@@ -88,7 +89,14 @@ export class Snake {
     const desired = Math.atan2(dy, dx);
 
     const diff = normalizeAngleDiff(desired - this.angle);
-    this.angle += clampSymmetric(diff, CONFIG.maxTurn);
+    // When chasing an apple, increase turn rate as the snake closes in.
+    // Orbiting becomes stable when dist < speed/maxTurn (~54px); scale up
+    // maxTurn past that threshold so the snake can always spiral in.
+    const effectiveTurn =
+      targetOverride !== undefined
+        ? Math.max(CONFIG.maxTurn, Math.min(0.3, CONFIG.speed / Math.max(distToTarget, 1)))
+        : CONFIG.maxTurn;
+    this.angle += clampSymmetric(diff, effectiveTurn);
 
     this.hx += Math.cos(this.angle) * CONFIG.speed;
     this.hy += Math.sin(this.angle) * CONFIG.speed;
